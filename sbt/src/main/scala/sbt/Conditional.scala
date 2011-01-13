@@ -48,6 +48,7 @@ trait Conditional[Source, Product, External] extends NotNull
 	{
 		import scala.collection.mutable.HashSet
 
+		val transitive = !java.lang.Boolean.getBoolean("sbt.intransitive")
 		val sourcesSnapshot = sourcesToProcess
 		val removedSources = new HashSet[Source]
 		removedSources ++= analysis.allSources
@@ -86,13 +87,13 @@ trait Conditional[Source, Product, External] extends NotNull
 				{
 					dependentProducts.find(p => productLastModified(p) < dependencyLastModified) match
 					{
-						case Some(modifiedProduct) =>
+						case Some(modifiedProduct) if transitive || !external.toString.endsWith(".class") =>
 						{
 							log.debug(productType + " " + modifiedProduct + " older than external dependency " + external)
 							unmodified -= dependentSource
 							modified += dependentSource
 						}
-						case None => ()
+						case _ => ()
 					}
 				}
 			}
@@ -106,7 +107,6 @@ trait Conditional[Source, Product, External] extends NotNull
 		}
 
 		val handled = new scala.collection.mutable.HashSet[Source]
-		val transitive = !java.lang.Boolean.getBoolean("sbt.intransitive")
 		def markModified(changed: Iterable[Source]) { for(c <- changed if !handled.contains(c)) markSourceModified(c) }
 		def markSourceModified(src: Source)
 		{
